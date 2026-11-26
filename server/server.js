@@ -10,7 +10,7 @@ const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
 const employeeRoutes = require("./routes/employeeRoutes");
-
+const equipmentRoutes = require("./routes/equipmentRoutes");
 const app = express();
 
 app.use(cors());
@@ -24,7 +24,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/employees", employeeRoutes);
-
+app.use("/api/equipment", equipmentRoutes);
 app.use((req, res) => {
   res.status(404).json({ message: "Route not found" });
 });
