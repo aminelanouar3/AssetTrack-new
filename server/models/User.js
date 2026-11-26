@@ -1,18 +1,23 @@
+
 const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema(
   {
-    username: {
+    matricule: {
       type: String,
       required: true,
       unique: true,
+      trim: true,
+      match: [/^\d{8}$/, "Matricule must contain exactly 8 digits"]
+    },
+    firstName: {
+      type: String,
+      required: true,
       trim: true
     },
-    email: {
+    lastName: {
       type: String,
       required: true,
-      unique: true,
-      lowercase: true,
       trim: true
     },
     password: {
@@ -23,10 +28,18 @@ const userSchema = new mongoose.Schema(
     role: {
       type: String,
       enum: ["admin", "technician"],
+      required: true,
       default: "technician"
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+      required: true
     }
   },
   { timestamps: true }
 );
+
+
 
 module.exports = mongoose.model("User", userSchema);
