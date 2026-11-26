@@ -1,7 +1,15 @@
+
 const mongoose = require("mongoose");
 
 const employeeSchema = new mongoose.Schema(
   {
+    matricule: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      match: [/^\d{8}$/, "Matricule must contain exactly 8 digits"]
+    },
     firstName: {
       type: String,
       required: true,
@@ -10,13 +18,6 @@ const employeeSchema = new mongoose.Schema(
     lastName: {
       type: String,
       required: true,
-      trim: true
-    },
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-      lowercase: true,
       trim: true
     },
     department: {
@@ -28,11 +29,6 @@ const employeeSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true
-    },
-    phone: {
-      type: String,
-      trim: true,
-      default: ""
     }
   },
   { timestamps: true }
