@@ -15,7 +15,6 @@ import {
   Package,
   ArrowUpRight,
   Activity,
-  CalendarDays,
   Settings,
   LogOut,
   RefreshCw,
@@ -42,6 +41,7 @@ import {
 import { useAuth } from "./context/AuthContext";
 import api from "./services/api";
 import Login from "./pages/Login";
+import Equipment from "./pages/Equipment";
 import "./App.css";
 
 const navigation = [
@@ -191,6 +191,8 @@ function App() {
         <div className="page-content">
           {activePage === "Dashboard" ? (
             <Dashboard />
+          ) : activePage === "Équipements" ? (
+            <Equipment />
           ) : (
             <ModulePlaceholder page={activePage} />
           )}
@@ -663,7 +665,6 @@ function EmptyChart({ message }) {
 
 function ModulePlaceholder({ page }) {
   const descriptions = {
-    Équipements: "Consulter et gérer le matériel informatique.",
     Catégories: "Organiser les équipements par catégorie.",
     Employés: "Gérer les informations des employés.",
     Affectations: "Suivre les affectations et les restitutions.",
