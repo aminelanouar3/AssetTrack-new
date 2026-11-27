@@ -117,6 +117,26 @@ const returnEquipment = async (req, res) => {
   }
 };
 
+
+const getEquipmentStatistics = async (req, res) => {
+  try {
+    const statistiques =
+      await equipmentService.getEquipmentStatistics();
+
+    return res.status(200).json({
+      message: "Statistiques des équipements récupérées avec succès",
+      statistiques
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Erreur lors du calcul des statistiques des équipements"
+    });
+  }
+};
+
+
 module.exports = {
   createEquipment,
   getEquipment,
@@ -124,5 +144,6 @@ module.exports = {
   updateEquipment,
   deleteEquipment,
   assignEquipment,
-  returnEquipment
+  returnEquipment,
+  getEquipmentStatistics
 };

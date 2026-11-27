@@ -9,7 +9,8 @@ const {
   updateEquipment,
   deleteEquipment,
   assignEquipment,
-  returnEquipment
+  returnEquipment,
+  getEquipmentStatistics
 } = require("../controllers/equipmentController");
 
 const { protect, authorize } = require("../middleware/authMiddleware");
@@ -21,6 +22,7 @@ router.route("/")
   .get(getEquipment);
 
 router.get("/search", getEquipment);
+router.get("/statistics", getEquipmentStatistics);
 
 router.route("/:id")
   .get(getEquipmentById)

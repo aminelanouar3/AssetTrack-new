@@ -246,6 +246,94 @@ const returnEquipment = async (id, notes = "") => {
   return equipment;
 };
 
+
+const getEquipmentStatistics = async () => {
+  const statistiques = await Equipment.aggregate([
+    {
+      $facet: {
+        // Nombre d'équipements par catégorie
+        parCategorie: [
+          {
+            $group: {
+              _id: "$categoryId",
+              nombre: { $sum: 1 }
+            }
+          },
+          {
+            $lookup: {
+              from: "categories",
+              localField: "_id",
+              foreignField: "_id",
+              as: "categorie"
+            }
+          },
+          {
+            $unwind: {
+              path: "$categorie",
+              preserveNullAndEmptyArrays: true
+            }
+          },
+          {
+            $project: {
+              _id: 0,
+              categorie: {
+                $ifNull: ["$categorie.name", "Sans catégorie"]
+              },
+              nombre: 1
+            }
+          },
+          { $sort: { nombre: -1 } }
+        ],
+
+        // Nombre d'équipements par statut
+        parStatut: [
+          {
+            $group: {
+              _id: "$status",
+              nombre: { $sum: 1 }
+            }
+          },
+          {
+            $project: {
+              _id: 0,
+              statut: "$_id",
+              nombre: 1
+            }
+          },
+          { $sort: { nombre: -1 } }
+        ],
+
+        // Valeur financière du parc informatique
+        resumeFinancier: [
+          {
+            $group: {
+              _id: null,
+              nombreTotal: { $sum: 1 },
+              valeurTotale: { $sum: "$purchasePrice" },
+              prixMoyen: { $avg: "$purchasePrice" }
+            }
+          },
+          {
+            $project: {
+              _id: 0,
+              nombreTotal: 1,
+              valeurTotale: { $round: ["$valeurTotale", 2] },
+              prixMoyen: { $round: ["$prixMoyen", 2] }
+            }
+          }
+        ]
+      }
+    }
+  ]);
+
+  return statistiques[0] || {
+    parCategorie: [],
+    parStatut: [],
+    resumeFinancier: []
+  };
+};
+
+
 module.exports = {
   EquipmentServiceError,
   createEquipment,
@@ -254,5 +342,6 @@ module.exports = {
   updateEquipment,
   deleteEquipment,
   assignEquipment,
-  returnEquipment
+  returnEquipment,
+  getEquipmentStatistics
 };

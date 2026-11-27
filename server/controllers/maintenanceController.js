@@ -100,10 +100,48 @@ const supprimerMaintenance = async (req, res) => {
   }
 };
 
+const obtenirStatistiquesCouts = async (req, res) => {
+  try {
+    const statistiques =
+      await maintenanceService.obtenirStatistiquesCouts();
+
+    return res.status(200).json({
+      message: "Statistiques des coûts récupérées avec succès",
+      statistiques
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Erreur lors du calcul des statistiques des coûts"
+    });
+  }
+};
+
+const obtenirStatistiquesMaintenances = async (req, res) => {
+  try {
+    const statistiques =
+      await maintenanceService.obtenirStatistiquesMaintenances();
+
+    return res.status(200).json({
+      message: "Statistiques des maintenances récupérées avec succès",
+      statistiques
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Erreur lors du calcul des statistiques des maintenances"
+    });
+  }
+};
+
 module.exports = {
   creerMaintenance,
   obtenirMaintenances,
   obtenirMaintenanceParId,
   modifierMaintenance,
-  supprimerMaintenance
+  supprimerMaintenance,
+  obtenirStatistiquesCouts,
+  obtenirStatistiquesMaintenances
 };

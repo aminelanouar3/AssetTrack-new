@@ -399,11 +399,135 @@ const supprimerMaintenance = async (id) => {
   await maintenance.deleteOne();
 };
 
+const obtenirStatistiquesCouts = async () => {
+  return await Maintenance.aggregate([
+    {
+      $group: {
+        _id: {
+          annee: { $year: "$dateMaintenance" },
+          mois: { $month: "$dateMaintenance" }
+        },
+        nombreMaintenances: { $sum: 1 },
+        coutTotal: { $sum: "$cout" },
+        coutMoyen: { $avg: "$cout" }
+      }
+    },
+    {
+      $project: {
+        _id: 0,
+        annee: "$_id.annee",
+        mois: "$_id.mois",
+        nombreMaintenances: 1,
+        coutTotal: { $round: ["$coutTotal", 2] },
+        coutMoyen: { $round: ["$coutMoyen", 2] }
+      }
+    },
+    {
+      $sort: {
+        annee: 1,
+        mois: 1
+      }
+    }
+  ]);
+};
+
+const obtenirStatistiquesMaintenances = async () => {
+  const statistiques = await Maintenance.aggregate([
+    {
+      $facet: {
+        parType: [
+          {
+            $group: {
+              _id: "$typeMaintenance",
+              nombre: { $sum: 1 },
+              coutTotal: { $sum: "$cout" }
+            }
+          },
+          {
+            $project: {
+              _id: 0,
+              type: "$_id",
+              nombre: 1,
+              coutTotal: { $round: ["$coutTotal", 2] }
+            }
+          },
+          { $sort: { nombre: -1 } }
+        ],
+
+        parStatut: [
+          {
+            $group: {
+              _id: "$statut",
+              nombre: { $sum: 1 }
+            }
+          },
+          {
+            $project: {
+              _id: 0,
+              statut: "$_id",
+              nombre: 1
+            }
+          },
+          { $sort: { nombre: -1 } }
+        ],
+
+        parTechnicien: [
+          {
+            $group: {
+              _id: "$technicianId",
+              nombreMaintenances: { $sum: 1 },
+              coutTotal: { $sum: "$cout" }
+            }
+          },
+          {
+            $lookup: {
+              from: "users",
+              localField: "_id",
+              foreignField: "_id",
+              as: "technicien"
+            }
+          },
+          {
+            $unwind: {
+              path: "$technicien",
+              preserveNullAndEmptyArrays: true
+            }
+          },
+          {
+            $project: {
+              _id: 0,
+              matricule: "$technicien.matricule",
+              nom: {
+                $concat: [
+                  { $ifNull: ["$technicien.firstName", ""] },
+                  " ",
+                  { $ifNull: ["$technicien.lastName", ""] }
+                ]
+              },
+              nombreMaintenances: 1,
+              coutTotal: { $round: ["$coutTotal", 2] }
+            }
+          },
+          { $sort: { nombreMaintenances: -1 } }
+        ]
+      }
+    }
+  ]);
+
+  return statistiques[0] || {
+    parType: [],
+    parStatut: [],
+    parTechnicien: []
+  };
+};
+
 module.exports = {
   MaintenanceServiceError,
   creerMaintenance,
   obtenirMaintenances,
   obtenirMaintenanceParId,
   modifierMaintenance,
-  supprimerMaintenance
+  supprimerMaintenance,
+  obtenirStatistiquesCouts,
+  obtenirStatistiquesMaintenances
 };
