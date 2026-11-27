@@ -1,18 +1,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
-  Search,
-  Plus,
-  RefreshCw,
-  Eye,
-  Pencil,
-  Trash2,
-  X,
-  Package,
-  ChevronLeft,
-  ChevronRight,
-  AlertCircle,
-  LoaderCircle,
+  Search, Plus, RefreshCw, Eye, Pencil, Trash2, X, Package,
+  ChevronLeft, ChevronRight, AlertCircle, LoaderCircle,
+  UserCheck, Undo2
 } from "lucide-react";
 import api from "../services/api";
 import "./Equipment.css";
@@ -20,40 +11,28 @@ import "./Equipment.css";
 const STATUSES = ["Available", "Assigned", "Maintenance", "Retired"];
 
 const EMPTY_FORM = {
-  name: "",
-  serialNumber: "",
-  brand: "",
-  model: "",
-  categoryId: "",
-  status: "Available",
-  purchasePrice: "",
-  purchaseDate: "",
-  warrantyEndDate: "",
-  specifications: "{}",
-  tags: "",
+  name: "", serialNumber: "", brand: "", model: "", categoryId: "",
+  status: "Available", purchasePrice: "", purchaseDate: "",
+  warrantyEndDate: "", specifications: "{}", tags: ""
 };
 
 const STATUS_LABELS = {
   Available: "Disponible",
   Assigned: "Affecté",
   Maintenance: "En maintenance",
-  Retired: "Retiré",
+  Retired: "Retiré"
 };
 
 function extractList(data, keys) {
   if (Array.isArray(data)) return data;
-
   for (const key of keys) {
     if (Array.isArray(data?.[key])) return data[key];
   }
-
   return [];
 }
 
 function formatDate(value) {
-  if (!value) return "—";
-
-  return new Date(value).toLocaleDateString("fr-FR");
+  return value ? new Date(value).toLocaleDateString("fr-FR") : "—";
 }
 
 function formatPrice(value) {
@@ -63,17 +42,13 @@ function formatPrice(value) {
 export default function Equipment() {
   const [equipment, setEquipment] = useState([]);
   const [categories, setCategories] = useState([]);
+
   const [pagination, setPagination] = useState({
-    total: 0,
-    page: 1,
-    limit: 10,
-    totalPages: 1,
+    total: 0, page: 1, limit: 10, totalPages: 1
   });
 
   const [filters, setFilters] = useState({
-    q: "",
-    status: "",
-    categoryId: "",
+    q: "", status: "", categoryId: ""
   });
 
   const [form, setForm] = useState(EMPTY_FORM);
@@ -81,6 +56,15 @@ export default function Equipment() {
 
   const [modal, setModal] = useState("");
   const [editingId, setEditingId] = useState(null);
+
+  const [assignment, setAssignment] = useState({
+    employeeId: "", notes: ""
+  });
+  const [returnNotes, setReturnNotes] = useState("");
+  const [employeeSearchResults, setEmployeeSearchResults] = useState([]);
+const [searchingEmployees, setSearchingEmployees] = useState(false);
+const [showEmployeeResults, setShowEmployeeResults] = useState(false);
+  const [actionEquipment, setActionEquipment] = useState(null);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -90,9 +74,7 @@ export default function Equipment() {
   const loadCategories = useCallback(async () => {
     try {
       const response = await api.get("/categories");
-      setCategories(
-        extractList(response.data, ["categories", "categoriesList"])
-      );
+      setCategories(extractList(response.data, ["categories", "categoriesList"]));
     } catch {
       setCategories([]);
     }
@@ -103,10 +85,7 @@ export default function Equipment() {
     setError("");
 
     try {
-      const params = {
-        page,
-        limit: 10,
-      };
+      const params = { page, limit: 10 };
 
       if (filters.q.trim()) params.q = filters.q.trim();
       if (filters.status) params.status = filters.status;
@@ -115,19 +94,11 @@ export default function Equipment() {
       const response = await api.get("/equipment", { params });
 
       setEquipment(response.data.equipment || []);
-      setPagination(
-        response.data.pagination || {
-          total: 0,
-          page: 1,
-          limit: 10,
-          totalPages: 1,
-        }
-      );
+      setPagination(response.data.pagination || {
+        total: 0, page: 1, limit: 10, totalPages: 1
+      });
     } catch (err) {
-      setError(
-        err.response?.data?.message ||
-          "Impossible de charger les équipements."
-      );
+      setError(err.response?.data?.message || "Impossible de charger les équipements.");
     } finally {
       setLoading(false);
     }
@@ -140,6 +111,47 @@ export default function Equipment() {
   useEffect(() => {
     loadEquipment(1);
   }, [loadEquipment]);
+
+  useEffect(() => {
+  const query = assignment.employeeQuery?.trim() || "";
+
+  if (modal !== "assign" || query.length < 2) {
+    setEmployeeSearchResults([]);
+    setShowEmployeeResults(false);
+    return;
+  }
+
+  const timeout = window.setTimeout(async () => {
+    setSearchingEmployees(true);
+
+    try {
+      const response = await api.get("/employees", {
+        params: {
+          q: query,
+          page: 1,
+          limit: 10
+        }
+      });
+
+      const results = response.data.employees || [];
+
+      // La recherche porte sur le matricule.
+      const matchingEmployees = results.filter(employee =>
+        employee.matricule?.includes(query)
+      );
+
+      setEmployeeSearchResults(matchingEmployees);
+      setShowEmployeeResults(true);
+    } catch (err) {
+      console.error("Erreur recherche employé :", err);
+      setEmployeeSearchResults([]);
+    } finally {
+      setSearchingEmployees(false);
+    }
+  }, 300);
+
+  return () => window.clearTimeout(timeout);
+}, [assignment.employeeQuery, modal]);
 
   const showMessage = (message) => {
     setSuccess(message);
@@ -155,7 +167,6 @@ export default function Equipment() {
 
   const openEdit = (item) => {
     setEditingId(item._id);
-
     setForm({
       name: item.name || "",
       serialNumber: item.serialNumber || "",
@@ -164,42 +175,29 @@ export default function Equipment() {
       categoryId: item.categoryId?._id || item.categoryId || "",
       status: item.status || "Available",
       purchasePrice: item.purchasePrice ?? "",
-      purchaseDate: item.purchaseDate
-        ? item.purchaseDate.substring(0, 10)
-        : "",
-      warrantyEndDate: item.warrantyEndDate
-        ? item.warrantyEndDate.substring(0, 10)
-        : "",
+      purchaseDate: item.purchaseDate ? item.purchaseDate.substring(0, 10) : "",
+      warrantyEndDate: item.warrantyEndDate ? item.warrantyEndDate.substring(0, 10) : "",
       specifications: JSON.stringify(item.specifications || {}, null, 2),
-      tags: (item.tags || []).join(", "),
+      tags: (item.tags || []).join(", ")
     });
-
     setError("");
     setModal("form");
   };
 
   const openDetails = async (item) => {
     setError("");
-
     try {
       const response = await api.get(`/equipment/${item._id}`);
       setSelectedEquipment(response.data.equipment);
       setModal("details");
     } catch (err) {
-      setError(
-        err.response?.data?.message ||
-          "Impossible de charger les détails."
-      );
+      setError(err.response?.data?.message || "Impossible de charger les détails.");
     }
   };
 
   const handleFormChange = (event) => {
     const { name, value } = event.target;
-
-    setForm((previous) => ({
-      ...previous,
-      [name]: value,
-    }));
+    setForm(previous => ({ ...previous, [name]: value }));
   };
 
   const handleSubmit = async (event) => {
@@ -211,7 +209,6 @@ export default function Equipment() {
 
     try {
       specifications = JSON.parse(form.specifications || "{}");
-
       if (
         specifications === null ||
         Array.isArray(specifications) ||
@@ -233,20 +230,12 @@ export default function Equipment() {
       categoryId: form.categoryId,
       purchasePrice: Number(form.purchasePrice),
       specifications,
-      tags: form.tags
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter(Boolean),
+      tags: form.tags.split(",").map(tag => tag.trim()).filter(Boolean)
     };
 
     if (form.purchaseDate) payload.purchaseDate = form.purchaseDate;
-    if (form.warrantyEndDate) {
-      payload.warrantyEndDate = form.warrantyEndDate;
-    }
-
-    if (editingId) {
-      payload.status = form.status;
-    }
+    if (form.warrantyEndDate) payload.warrantyEndDate = form.warrantyEndDate;
+    if (editingId) payload.status = form.status;
 
     try {
       if (editingId) {
@@ -262,45 +251,101 @@ export default function Equipment() {
       setEditingId(null);
       await loadEquipment(editingId ? pagination.page : 1);
     } catch (err) {
-      setError(
-        err.response?.data?.message ||
-          "Une erreur est survenue lors de l'enregistrement."
-      );
+      setError(err.response?.data?.message || "Une erreur est survenue lors de l'enregistrement.");
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (item) => {
-    const confirmed = window.confirm(
-      `Voulez-vous vraiment supprimer l'équipement "${item.name}" ?`
-    );
-
-    if (!confirmed) return;
+    if (!window.confirm(`Voulez-vous vraiment supprimer l'équipement "${item.name}" ?`)) {
+      return;
+    }
 
     setError("");
-
     try {
       await api.delete(`/equipment/${item._id}`);
       showMessage("Équipement supprimé avec succès.");
 
-      const nextPage =
-        equipment.length === 1 && pagination.page > 1
-          ? pagination.page - 1
-          : pagination.page;
+      const nextPage = equipment.length === 1 && pagination.page > 1
+        ? pagination.page - 1
+        : pagination.page;
 
       await loadEquipment(nextPage);
     } catch (err) {
-      setError(
-        err.response?.data?.message ||
-          "Impossible de supprimer cet équipement."
-      );
+      setError(err.response?.data?.message || "Impossible de supprimer cet équipement.");
+    }
+  };
+
+  const openAssign = (item) => {
+  setActionEquipment(item);
+  setAssignment({
+    employeeId: "",
+    employeeQuery: "",
+    notes: ""
+  });
+  setEmployeeSearchResults([]);
+  setShowEmployeeResults(false);
+  setError("");
+  setModal("assign");
+};
+
+  const handleAssign = async (event) => {
+    event.preventDefault();
+
+    if (!assignment.employeeId) {
+      setError("Veuillez sélectionner un employé.");
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+
+    try {
+      await api.patch(`/equipment/${actionEquipment._id}/assign`, assignment);
+      setModal("");
+      setActionEquipment(null);
+      showMessage("Équipement affecté avec succès.");
+      await loadEquipment(pagination.page);
+    } catch (err) {
+      setError(err.response?.data?.message || "Impossible d'affecter cet équipement.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openReturn = (item) => {
+    setActionEquipment(item);
+    setReturnNotes("");
+    setError("");
+    setModal("return");
+  };
+
+  const handleReturn = async (event) => {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+
+    try {
+      await api.patch(`/equipment/${actionEquipment._id}/return`, {
+        notes: returnNotes
+      });
+
+      setModal("");
+      setActionEquipment(null);
+      showMessage("Retour de l'équipement enregistré avec succès.");
+      await loadEquipment(pagination.page);
+    } catch (err) {
+      setError(err.response?.data?.message || "Impossible d'enregistrer le retour.");
+    } finally {
+      setSaving(false);
     }
   };
 
   const closeModal = () => {
     setModal("");
     setSelectedEquipment(null);
+    setActionEquipment(null);
     setError("");
   };
 
@@ -312,33 +357,24 @@ export default function Equipment() {
           <h1>Équipements</h1>
           <p>Gérez et suivez l'ensemble de vos équipements informatiques.</p>
         </div>
-
         <button className="equipment-primary-btn" onClick={openCreate}>
-          <Plus size={18} />
-          Ajouter un équipement
+          <Plus size={18} /> Ajouter un équipement
         </button>
       </div>
 
       <div className="equipment-summary">
-        <div className="equipment-summary-icon">
-          <Package size={23} />
-        </div>
+        <div className="equipment-summary-icon"><Package size={23} /></div>
         <div>
           <span>Total des équipements</span>
           <strong>{pagination.total.toLocaleString("fr-FR")}</strong>
         </div>
       </div>
 
-      {success && (
-        <div className="equipment-success">
-          {success}
-        </div>
-      )}
+      {success && <div className="equipment-success">{success}</div>}
 
       {error && !modal && (
         <div className="equipment-alert">
-          <AlertCircle size={18} />
-          {error}
+          <AlertCircle size={18} /> {error}
         </div>
       )}
 
@@ -349,54 +385,37 @@ export default function Equipment() {
             type="text"
             placeholder="Rechercher par nom, marque, modèle ou numéro de série..."
             value={filters.q}
-            onChange={(event) =>
-              setFilters((previous) => ({
-                ...previous,
-                q: event.target.value,
-              }))
-            }
+            onChange={event => setFilters(previous => ({
+              ...previous, q: event.target.value
+            }))}
           />
         </div>
 
         <select
           value={filters.status}
-          onChange={(event) =>
-            setFilters((previous) => ({
-              ...previous,
-              status: event.target.value,
-            }))
-          }
+          onChange={event => setFilters(previous => ({
+            ...previous, status: event.target.value
+          }))}
         >
           <option value="">Tous les statuts</option>
-          {STATUSES.map((status) => (
-            <option key={status} value={status}>
-              {STATUS_LABELS[status]}
-            </option>
+          {STATUSES.map(status => (
+            <option key={status} value={status}>{STATUS_LABELS[status]}</option>
           ))}
         </select>
 
         <select
           value={filters.categoryId}
-          onChange={(event) =>
-            setFilters((previous) => ({
-              ...previous,
-              categoryId: event.target.value,
-            }))
-          }
+          onChange={event => setFilters(previous => ({
+            ...previous, categoryId: event.target.value
+          }))}
         >
           <option value="">Toutes les catégories</option>
-          {categories.map((category) => (
-            <option key={category._id} value={category._id}>
-              {category.name}
-            </option>
+          {categories.map(category => (
+            <option key={category._id} value={category._id}>{category.name}</option>
           ))}
         </select>
 
-        <button
-          className="equipment-icon-btn"
-          onClick={() => loadEquipment(1)}
-          title="Actualiser"
-        >
+        <button className="equipment-icon-btn" onClick={() => loadEquipment(1)} title="Actualiser">
           <RefreshCw size={18} />
         </button>
       </div>
@@ -434,58 +453,44 @@ export default function Equipment() {
                     <th>Actions</th>
                   </tr>
                 </thead>
-
                 <tbody>
-                  {equipment.map((item) => (
+                  {equipment.map(item => (
                     <tr key={item._id}>
                       <td>
                         <div className="equipment-name-cell">
-                          <div className="equipment-item-icon">
-                            <Package size={18} />
-                          </div>
+                          <div className="equipment-item-icon"><Package size={18} /></div>
                           <div>
                             <strong>{item.name}</strong>
-                            <span>
-                              {[item.brand, item.model]
-                                .filter(Boolean)
-                                .join(" · ") || "—"}
-                            </span>
+                            <span>{[item.brand, item.model].filter(Boolean).join(" · ") || "—"}</span>
                           </div>
                         </div>
                       </td>
-
                       <td>{item.serialNumber}</td>
-
+                      <td>{item.categoryId?.name || "—"}</td>
                       <td>
-                        {item.categoryId?.name || "—"}
-                      </td>
-
-                      <td>
-                        <span
-                          className={`equipment-status status-${item.status?.toLowerCase()}`}
-                        >
+                        <span className={`equipment-status status-${item.status?.toLowerCase()}`}>
                           {STATUS_LABELS[item.status] || item.status}
                         </span>
                       </td>
-
                       <td>{formatPrice(item.purchasePrice)}</td>
-
                       <td>
                         <div className="equipment-actions">
-                          <button
-                            title="Détails"
-                            onClick={() => openDetails(item)}
-                          >
+                          <button title="Détails" onClick={() => openDetails(item)}>
                             <Eye size={17} />
                           </button>
-
-                          <button
-                            title="Modifier"
-                            onClick={() => openEdit(item)}
-                          >
+                          {item.status === "Available" && (
+                            <button title="Affecter" onClick={() => openAssign(item)}>
+                              <UserCheck size={17} />
+                            </button>
+                          )}
+                          {item.status === "Assigned" && (
+                            <button title="Retourner" onClick={() => openReturn(item)}>
+                              <Undo2 size={17} />
+                            </button>
+                          )}
+                          <button title="Modifier" onClick={() => openEdit(item)}>
                             <Pencil size={17} />
                           </button>
-
                           <button
                             className="equipment-delete-action"
                             title="Supprimer"
@@ -502,10 +507,7 @@ export default function Equipment() {
             </div>
 
             <div className="equipment-pagination">
-              <span>
-                Page {pagination.page} sur {pagination.totalPages}
-              </span>
-
+              <span>Page {pagination.page} sur {pagination.totalPages}</span>
               <div>
                 <button
                   disabled={pagination.page <= 1}
@@ -513,7 +515,6 @@ export default function Equipment() {
                 >
                   <ChevronLeft size={18} />
                 </button>
-
                 <button
                   disabled={pagination.page >= pagination.totalPages}
                   onClick={() => loadEquipment(pagination.page + 1)}
@@ -528,176 +529,257 @@ export default function Equipment() {
 
       {modal === "form" && (
         <div className="equipment-modal-overlay" onClick={closeModal}>
-          <div
-            className="equipment-modal equipment-form-modal"
-            onClick={(event) => event.stopPropagation()}
-          >
+          <div className="equipment-modal equipment-form-modal" onClick={event => event.stopPropagation()}>
             <div className="equipment-modal-header">
               <div>
-                <h2>
-                  {editingId ? "Modifier l'équipement" : "Nouvel équipement"}
-                </h2>
+                <h2>{editingId ? "Modifier l'équipement" : "Nouvel équipement"}</h2>
                 <p>Renseignez les informations de l'équipement.</p>
               </div>
-              <button onClick={closeModal}>
-                <X size={21} />
-              </button>
+              <button onClick={closeModal}><X size={21} /></button>
             </div>
 
-            {error && (
-              <div className="equipment-alert">
-                <AlertCircle size={18} />
-                {error}
-              </div>
-            )}
+            {error && <div className="equipment-alert"><AlertCircle size={18} />{error}</div>}
 
             <form onSubmit={handleSubmit}>
               <div className="equipment-form-grid">
-                <label>
-                  Nom de l'équipement *
-                  <input
-                    name="name"
-                    value={form.name}
-                    onChange={handleFormChange}
-                    required
-                  />
+                <label>Nom de l'équipement *
+                  <input name="name" value={form.name} onChange={handleFormChange} required />
                 </label>
-
-                <label>
-                  Numéro de série *
-                  <input
-                    name="serialNumber"
-                    value={form.serialNumber}
-                    onChange={handleFormChange}
-                    required
-                  />
+                <label>Numéro de série *
+                  <input name="serialNumber" value={form.serialNumber} onChange={handleFormChange} required />
                 </label>
-
-                <label>
-                  Marque
-                  <input
-                    name="brand"
-                    value={form.brand}
-                    onChange={handleFormChange}
-                  />
+                <label>Marque
+                  <input name="brand" value={form.brand} onChange={handleFormChange} />
                 </label>
-
-                <label>
-                  Modèle
-                  <input
-                    name="model"
-                    value={form.model}
-                    onChange={handleFormChange}
-                  />
+                <label>Modèle
+                  <input name="model" value={form.model} onChange={handleFormChange} />
                 </label>
-
-                <label>
-                  Catégorie *
-                  <select
-                    name="categoryId"
-                    value={form.categoryId}
-                    onChange={handleFormChange}
-                    required
-                  >
+                <label>Catégorie *
+                  <select name="categoryId" value={form.categoryId} onChange={handleFormChange} required>
                     <option value="">Sélectionner une catégorie</option>
-                    {categories.map((category) => (
-                      <option key={category._id} value={category._id}>
-                        {category.name}
-                      </option>
+                    {categories.map(category => (
+                      <option key={category._id} value={category._id}>{category.name}</option>
                     ))}
                   </select>
                 </label>
-
-                <label>
-                  Prix d'achat (TND) *
-                  <input
-                    name="purchasePrice"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={form.purchasePrice}
-                    onChange={handleFormChange}
-                    required
-                  />
+                <label>Prix d'achat (TND) *
+                  <input name="purchasePrice" type="number" min="0" step="0.01" value={form.purchasePrice} onChange={handleFormChange} required />
                 </label>
-
-                <label>
-                  Date d'achat
-                  <input
-                    name="purchaseDate"
-                    type="date"
-                    value={form.purchaseDate}
-                    onChange={handleFormChange}
-                  />
+                <label>Date d'achat
+                  <input name="purchaseDate" type="date" value={form.purchaseDate} onChange={handleFormChange} />
                 </label>
-
-                <label>
-                  Fin de garantie
-                  <input
-                    name="warrantyEndDate"
-                    type="date"
-                    value={form.warrantyEndDate}
-                    onChange={handleFormChange}
-                  />
+                <label>Fin de garantie
+                  <input name="warrantyEndDate" type="date" value={form.warrantyEndDate} onChange={handleFormChange} />
                 </label>
 
                 {editingId && (
-                  <label>
-                    Statut
-                    <select
-                      name="status"
-                      value={form.status}
-                      onChange={handleFormChange}
-                      disabled={form.status === "Assigned"}
-                    >
-                      {STATUSES.filter((status) => status !== "Assigned").map(
-                        (status) => (
-                          <option key={status} value={status}>
-                            {STATUS_LABELS[status]}
-                          </option>
-                        )
-                      )}
+                  <label>Statut
+                    <select name="status" value={form.status} onChange={handleFormChange} disabled={form.status === "Assigned"}>
+                      {STATUSES.filter(status => status !== "Assigned").map(status => (
+                        <option key={status} value={status}>{STATUS_LABELS[status]}</option>
+                      ))}
                     </select>
                   </label>
                 )}
 
-                <label className="equipment-full-field">
-                  Caractéristiques (JSON)
-                  <textarea
-                    name="specifications"
-                    rows="4"
-                    value={form.specifications}
-                    onChange={handleFormChange}
-                    placeholder='{"RAM": "16 GB", "CPU": "Intel Core i7"}'
-                  />
+                <label className="equipment-full-field">Caractéristiques (JSON)
+                  <textarea name="specifications" rows="4" value={form.specifications} onChange={handleFormChange} placeholder='{"RAM": "16 GB", "CPU": "Intel Core i7"}' />
                 </label>
-
-                <label className="equipment-full-field">
-                  Tags (séparés par des virgules)
-                  <input
-                    name="tags"
-                    value={form.tags}
-                    onChange={handleFormChange}
-                    placeholder="ordinateur, portable, informatique"
-                  />
+                <label className="equipment-full-field">Tags (séparés par des virgules)
+                  <input name="tags" value={form.tags} onChange={handleFormChange} placeholder="ordinateur, portable, informatique" />
                 </label>
               </div>
 
               <div className="equipment-modal-footer">
-                <button
-                  type="button"
-                  className="equipment-secondary-btn"
-                  onClick={closeModal}
-                >
-                  Annuler
-                </button>
-
-                <button
-                  type="submit"
-                  className="equipment-primary-btn"
-                  disabled={saving}
-                >
+                <button type="button" className="equipment-secondary-btn" onClick={closeModal}>Annuler</button>
+                <button type="submit" className="equipment-primary-btn" disabled={saving}>
                   {saving ? "Enregistrement..." : "Enregistrer"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {modal === "assign" && actionEquipment && (
+        <div className="equipment-modal-overlay" onClick={closeModal}>
+          <div className="equipment-modal equipment-action-modal" onClick={event => event.stopPropagation()}>
+            <div className="equipment-modal-header">
+              <div>
+                <h2>Affecter un équipement</h2>
+                <p>{actionEquipment.name} — {actionEquipment.serialNumber}</p>
+              </div>
+              <button onClick={closeModal}><X size={21} /></button>
+            </div>
+
+            {error && <div className="equipment-alert"><AlertCircle size={18} />{error}</div>}
+
+            <form onSubmit={handleAssign}>
+              <label className="equipment-action-field">
+  Sélectionner un employé *
+
+  <div style={{ position: "relative" }}>
+    <input
+      type="text"
+      value={assignment.employeeQuery || ""}
+      placeholder="Saisir le matricule de l'employé..."
+      autoComplete="off"
+      required={!assignment.employeeId}
+      onChange={event => {
+        setAssignment(previous => ({
+          ...previous,
+          employeeId: "",
+          employeeQuery: event.target.value
+        }));
+        setShowEmployeeResults(true);
+      }}
+      onFocus={() => {
+        if (employeeSearchResults.length > 0) {
+          setShowEmployeeResults(true);
+        }
+      }}
+    />
+
+    {searchingEmployees && (
+      <span style={{
+        display: "block",
+        marginTop: "6px",
+        color: "#64748b",
+        fontSize: "12px"
+      }}>
+        Recherche en cours...
+      </span>
+    )}
+
+    {showEmployeeResults && assignment.employeeQuery?.trim().length >= 2 && (
+      <div style={{
+        position: "absolute",
+        top: "100%",
+        left: 0,
+        right: 0,
+        zIndex: 20,
+        background: "#fff",
+        border: "1px solid #e2e8f0",
+        borderRadius: "8px",
+        marginTop: "5px",
+        maxHeight: "200px",
+        overflowY: "auto",
+        boxShadow: "0 5px 15px rgba(0,0,0,0.08)"
+      }}>
+        {employeeSearchResults.length > 0 ? (
+          employeeSearchResults.map(employee => (
+            <button
+              key={employee._id}
+              type="button"
+              onClick={() => {
+                setAssignment(previous => ({
+                  ...previous,
+                  employeeId: employee._id,
+                  employeeQuery: `${employee.firstName} ${employee.lastName} — ${employee.matricule}`
+                }));
+                setShowEmployeeResults(false);
+              }}
+              style={{
+                display: "block",
+                width: "100%",
+                padding: "12px",
+                border: "none",
+                borderBottom: "1px solid #f1f5f9",
+                background: "#fff",
+                textAlign: "left",
+                cursor: "pointer"
+              }}
+            >
+              <strong style={{ display: "block", color: "#1e293b" }}>
+                {employee.firstName} {employee.lastName}
+              </strong>
+              <span style={{ color: "#64748b", fontSize: "12px" }}>
+                Matricule : {employee.matricule}
+                {employee.department ? ` · ${employee.department}` : ""}
+              </span>
+            </button>
+          ))
+        ) : !searchingEmployees ? (
+          <p style={{
+            padding: "12px",
+            margin: 0,
+            color: "#64748b",
+            fontSize: "13px"
+          }}>
+            Aucun employé trouvé pour ce matricule.
+          </p>
+        ) : null}
+      </div>
+    )}
+  </div>
+
+  {assignment.employeeId && (
+    <span style={{
+      display: "block",
+      marginTop: "6px",
+      color: "#16a34a",
+      fontSize: "12px"
+    }}>
+      Employé sélectionné.
+    </span>
+  )}
+</label>
+
+              <label className="equipment-action-field">
+                Note (facultative)
+                <textarea
+                  rows="3"
+                  value={assignment.notes}
+                  onChange={event => setAssignment(previous => ({
+                    ...previous, notes: event.target.value
+                  }))}
+                  placeholder="Ajouter une note sur cette affectation..."
+                />
+              </label>
+
+              <div className="equipment-modal-footer">
+                <button type="button" className="equipment-secondary-btn" onClick={closeModal}>Annuler</button>
+                <button
+  type="submit"
+  className="equipment-primary-btn"
+  disabled={saving || !assignment.employeeId}
+>
+  {saving ? "Affectation..." : "Confirmer l'affectation"}
+</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {modal === "return" && actionEquipment && (
+        <div className="equipment-modal-overlay" onClick={closeModal}>
+          <div className="equipment-modal equipment-action-modal" onClick={event => event.stopPropagation()}>
+            <div className="equipment-modal-header">
+              <div>
+                <h2>Retourner un équipement</h2>
+                <p>{actionEquipment.name} — {actionEquipment.serialNumber}</p>
+              </div>
+              <button onClick={closeModal}><X size={21} /></button>
+            </div>
+
+            {error && <div className="equipment-alert"><AlertCircle size={18} />{error}</div>}
+
+            <form onSubmit={handleReturn}>
+              <label className="equipment-action-field">
+                Note du retour (facultative)
+                <textarea
+                  rows="4"
+                  value={returnNotes}
+                  onChange={event => setReturnNotes(event.target.value)}
+                  placeholder="État de l'équipement, accessoires retournés..."
+                />
+              </label>
+
+              <div className="equipment-modal-footer">
+                <button type="button" className="equipment-secondary-btn" onClick={closeModal}>Annuler</button>
+                <button type="submit" className="equipment-primary-btn" disabled={saving}>
+                  {saving ? "Enregistrement..." : "Confirmer le retour"}
                 </button>
               </div>
             </form>
@@ -707,60 +789,25 @@ export default function Equipment() {
 
       {modal === "details" && selectedEquipment && (
         <div className="equipment-modal-overlay" onClick={closeModal}>
-          <div
-            className="equipment-modal equipment-details-modal"
-            onClick={(event) => event.stopPropagation()}
-          >
+          <div className="equipment-modal equipment-details-modal" onClick={event => event.stopPropagation()}>
             <div className="equipment-modal-header">
               <div>
                 <h2>Détails de l'équipement</h2>
                 <p>Informations complètes sur cet équipement.</p>
               </div>
-              <button onClick={closeModal}>
-                <X size={21} />
-              </button>
+              <button onClick={closeModal}><X size={21} /></button>
             </div>
 
             <div className="equipment-details-grid">
-              <div>
-                <span>Nom</span>
-                <strong>{selectedEquipment.name}</strong>
-              </div>
-              <div>
-                <span>Numéro de série</span>
-                <strong>{selectedEquipment.serialNumber}</strong>
-              </div>
-              <div>
-                <span>Marque</span>
-                <strong>{selectedEquipment.brand || "—"}</strong>
-              </div>
-              <div>
-                <span>Modèle</span>
-                <strong>{selectedEquipment.model || "—"}</strong>
-              </div>
-              <div>
-                <span>Catégorie</span>
-                <strong>{selectedEquipment.categoryId?.name || "—"}</strong>
-              </div>
-              <div>
-                <span>Statut</span>
-                <strong>
-                  {STATUS_LABELS[selectedEquipment.status] ||
-                    selectedEquipment.status}
-                </strong>
-              </div>
-              <div>
-                <span>Prix d'achat</span>
-                <strong>{formatPrice(selectedEquipment.purchasePrice)}</strong>
-              </div>
-              <div>
-                <span>Date d'achat</span>
-                <strong>{formatDate(selectedEquipment.purchaseDate)}</strong>
-              </div>
-              <div>
-                <span>Fin de garantie</span>
-                <strong>{formatDate(selectedEquipment.warrantyEndDate)}</strong>
-              </div>
+              <div><span>Nom</span><strong>{selectedEquipment.name}</strong></div>
+              <div><span>Numéro de série</span><strong>{selectedEquipment.serialNumber}</strong></div>
+              <div><span>Marque</span><strong>{selectedEquipment.brand || "—"}</strong></div>
+              <div><span>Modèle</span><strong>{selectedEquipment.model || "—"}</strong></div>
+              <div><span>Catégorie</span><strong>{selectedEquipment.categoryId?.name || "—"}</strong></div>
+              <div><span>Statut</span><strong>{STATUS_LABELS[selectedEquipment.status] || selectedEquipment.status}</strong></div>
+              <div><span>Prix d'achat</span><strong>{formatPrice(selectedEquipment.purchasePrice)}</strong></div>
+              <div><span>Date d'achat</span><strong>{formatDate(selectedEquipment.purchaseDate)}</strong></div>
+              <div><span>Fin de garantie</span><strong>{formatDate(selectedEquipment.warrantyEndDate)}</strong></div>
               <div>
                 <span>Employé actuel</span>
                 <strong>
@@ -772,48 +819,35 @@ export default function Equipment() {
             </div>
 
             <div className="equipment-details-section">
-  <h3>Caractéristiques techniques</h3>
-
-  {selectedEquipment.specifications &&
-  Object.keys(selectedEquipment.specifications).length > 0 ? (
-    <div className="equipment-specifications">
-  {Object.entries(selectedEquipment.specifications).map(
-    ([key, value]) => (
-      <div className="equipment-specification" key={key}>
-        <span>
-          {key.replace(/([A-Z])/g, " $1").replace(/_/g, " ").trim()} :
-        </span>
-        <strong>{String(value ?? "—")}</strong>
-      </div>
-    )
-  )}
-</div>
-  ) : (
-    <p className="equipment-muted">
-      Aucune caractéristique technique renseignée.
-    </p>
-  )}
-</div>
+              <h3>Caractéristiques techniques</h3>
+              {selectedEquipment.specifications && Object.keys(selectedEquipment.specifications).length > 0 ? (
+                <div className="equipment-specifications">
+                  {Object.entries(selectedEquipment.specifications).map(([key, value]) => (
+                    <div className="equipment-specification" key={key}>
+                      <span>{key.replace(/([A-Z])/g, " $1").replace(/_/g, " ").trim()} :</span>
+                      <strong>{String(value ?? "—")}</strong>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="equipment-muted">Aucune caractéristique technique renseignée.</p>
+              )}
+            </div>
 
             <div className="equipment-details-section">
               <h3>Historique des affectations</h3>
-
               {selectedEquipment.assignmentHistory?.length ? (
                 <div className="equipment-history">
-                  {selectedEquipment.assignmentHistory.map((assignment, index) => (
-                    <div key={assignment._id || index}>
+                  {selectedEquipment.assignmentHistory.map((assignmentItem, index) => (
+                    <div key={assignmentItem._id || index}>
                       <strong>
-                        {assignment.employeeId
-                          ? `${assignment.employeeId.firstName} ${assignment.employeeId.lastName}`
+                        {assignmentItem.employeeId
+                          ? `${assignmentItem.employeeId.firstName} ${assignmentItem.employeeId.lastName}`
                           : "Employé inconnu"}
                       </strong>
-                      <span>
-                        Affecté le : {formatDate(assignment.assignedAt)}
-                      </span>
-                      <span>
-                        Retourné le : {formatDate(assignment.returnedAt)}
-                      </span>
-                      {assignment.notes && <p>{assignment.notes}</p>}
+                      <span>Affecté le : {formatDate(assignmentItem.assignedAt)}</span>
+                      <span>Retourné le : {formatDate(assignmentItem.returnedAt)}</span>
+                      {assignmentItem.notes && <p>{assignmentItem.notes}</p>}
                     </div>
                   ))}
                 </div>
@@ -823,22 +857,22 @@ export default function Equipment() {
             </div>
 
             <div className="equipment-modal-footer">
-              <button
-                className="equipment-secondary-btn"
-                onClick={closeModal}
-              >
-                Fermer
-              </button>
-              <button
-                className="equipment-primary-btn"
-                onClick={() => {
-                  const item = selectedEquipment;
-                  setModal("");
-                  openEdit(item);
-                }}
-              >
-                <Pencil size={16} />
-                Modifier
+              <button className="equipment-secondary-btn" onClick={closeModal}>Fermer</button>
+
+              {selectedEquipment.status === "Available" && (
+                <button className="equipment-primary-btn" onClick={() => openAssign(selectedEquipment)}>
+                  <UserCheck size={16} /> Affecter
+                </button>
+              )}
+
+              {selectedEquipment.status === "Assigned" && (
+                <button className="equipment-primary-btn" onClick={() => openReturn(selectedEquipment)}>
+                  <Undo2 size={16} /> Retourner
+                </button>
+              )}
+
+              <button className="equipment-primary-btn" onClick={() => openEdit(selectedEquipment)}>
+                <Pencil size={16} /> Modifier
               </button>
             </div>
           </div>

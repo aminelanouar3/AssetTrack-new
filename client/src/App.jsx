@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
@@ -41,6 +40,8 @@ import {
 import { useAuth } from "./context/AuthContext";
 import api from "./services/api";
 import Login from "./pages/Login";
+import Employees from "./pages/Employees";
+import Maintenance from "./pages/Maintenance";
 import Equipment from "./pages/Equipment";
 import "./App.css";
 
@@ -193,6 +194,10 @@ function App() {
             <Dashboard />
           ) : activePage === "Équipements" ? (
             <Equipment />
+          ) : activePage === "Employés" ? (
+            <Employees />
+          ) : activePage === "Maintenances" ? (
+            <Maintenance />
           ) : (
             <ModulePlaceholder page={activePage} />
           )}
