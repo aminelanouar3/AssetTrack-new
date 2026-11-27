@@ -585,3 +585,12 @@ button {
     line-height: 1.5;
   }
 }
+.auth-loading {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: #f6f8fc;
+  color: #3268e8;
+  font-size: 14px;
+  font-weight: 600;
+}

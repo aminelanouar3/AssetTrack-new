@@ -19,6 +19,9 @@ import {
   Settings,
   LogOut,
 } from "lucide-react";
+
+import { useAuth } from "./context/AuthContext";
+import Login from "./pages/Login";
 import "./App.css";
 
 const navigation = [
@@ -28,12 +31,28 @@ const navigation = [
   { label: "Employés", icon: Users },
   { label: "Affectations", icon: ClipboardList },
   { label: "Maintenances", icon: Wrench },
-  { label: "Utilisateurs", icon: UserCog },
+  { label: "Utilisateurs", icon: UserCog, adminOnly: true },
 ];
 
 function App() {
+  const { user, loading, logout } = useAuth();
   const [activePage, setActivePage] = useState("Dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  if (loading) {
+    return <div className="auth-loading">Chargement...</div>;
+  }
+
+  if (!user) {
+    return <Login />;
+  }
+
+  const visibleNavigation = navigation.filter(
+    (item) => !item.adminOnly || user.role === "admin"
+  );
+
+  const initials = `${user.firstName?.[0] || ""}${user.lastName?.[0] || ""}`
+    .toUpperCase();
 
   return (
     <div className="app-container">
@@ -51,7 +70,7 @@ function App() {
         <div className="nav-section">
           <p className="nav-title">MENU PRINCIPAL</p>
 
-          {navigation.map(({ label, icon: Icon }) => (
+          {visibleNavigation.map(({ label, icon: Icon }) => (
             <button
               key={label}
               className={`nav-item ${activePage === label ? "active" : ""}`}
@@ -74,16 +93,19 @@ function App() {
             <Settings size={19} />
             <span>Paramètres</span>
           </button>
-          <button className="nav-item logout">
+
+          <button className="nav-item logout" onClick={logout}>
             <LogOut size={19} />
             <span>Déconnexion</span>
           </button>
 
           <div className="sidebar-footer">
-            <div className="avatar">AD</div>
+            <div className="avatar">{initials || "U"}</div>
             <div className="user-info">
-              <strong>Administrateur</strong>
-              <span>Administration</span>
+              <strong>{user.firstName} {user.lastName}</strong>
+              <span>
+                {user.role === "admin" ? "Administrateur" : "Technicien"}
+              </span>
             </div>
             <ChevronDown size={16} />
           </div>
@@ -113,9 +135,8 @@ function App() {
             </div>
             <button className="notification-button">
               <Bell size={19} />
-              <span />
             </button>
-            <div className="topbar-avatar">AD</div>
+            <div className="topbar-avatar">{initials || "U"}</div>
           </div>
         </header>
 
